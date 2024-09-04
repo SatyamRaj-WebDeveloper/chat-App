@@ -7,14 +7,14 @@ import { useNavigate } from 'react-router-dom';
 const SignUp = ({className}) => {
   const navigate = useNavigate()
    const handleSubmit = (e)=>{
-    console.log(e)
+    // console.log(e)
      e.preventDefault()
      const formData = {
       FullName: e.target[0].value,
       Email: e.target[1].value,
       Password: e.target[2].value,
     }
-     console.log(formData)
+    //  console.log(formData)
      try {
       fetch('http://localhost:8000/api/v1/users/signup',{
         method : 'POST',
