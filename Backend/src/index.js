@@ -5,6 +5,7 @@ import cors from 'cors'
 import {Server, Socket} from 'socket.io'
 import {createServer} from 'http'
 import Friend from './FriendSchema.js'
+import bcrypt from 'bcrypt'
 
 const httpServer = createServer();
 const app = express();
@@ -41,10 +42,11 @@ app.post('/api/v1/users/signup' , async(req,res)=>{
         if(!FullName || !Email || !Password){
             return res.status(400).json({message : "All fields are required"})
         }
+        const hashedPassword = await bcrypt.hash(Password ,10)
         const newuser = new User({
             Fullname : FullName,
             email : Email ,
-            password : Password,
+            password : hashedPassword,
         })
       await newuser.save()
         res.status(201).json({message : "user registered successfully" , newuser})
@@ -52,15 +54,13 @@ app.post('/api/v1/users/signup' , async(req,res)=>{
       console.log("Error during saving a new user" , error.message)
     }
 })
+
 app.post('/api/v1/users/login' , async(req,res)=>{
     const {Email , Password} = req.body;
     if(!Email || !Password){
         res.status(404).json({message : 'Email and Password both are required'})
     }
-    const user = await User.findOne({
-        email:Email,
-    })
-    
+    const user = await User.findOne({email : Email})
     
     if(!user){
         res.status(404).json({message : "NO USER Found"})
@@ -73,6 +73,7 @@ app.post('/api/v1/users/login' , async(req,res)=>{
 app.post('/api/v1/users/addfriend/:userId' , async(req,res)=>{
     const {FullName , Phone} = req.body;
     const userId = req.params.userId;
+    console.log(userId)
   try {
       if(!FullName , !Phone){
           return res.status(400).json({message : "Name and Phone number both are required"})
@@ -80,7 +81,7 @@ app.post('/api/v1/users/addfriend/:userId' , async(req,res)=>{
       const exist =await Friend.findOne({
         Phone : Phone
     })
-    // console.log("exist = " ,exist )
+   
       if(exist){
        return res.status(400).json({message: "Friend already exist"})
       }else{
@@ -89,23 +90,22 @@ app.post('/api/v1/users/addfriend/:userId' , async(req,res)=>{
               FullName : FullName,
               Phone  : Phone,
           })
-
-          await User.findByIdAndUpdate(
+          
+       const check =  await User.findByIdAndUpdate(
             userId ,
             {
-                $push : {
-                    friends : {
-                        _id : friend._id ,
-                        Fullname : friend.FullName,
-                        Phone : friend.Phone
+                $push:{
+                    friends:{
+                        _id:friend._id
                     }
-                       
                 }
+                
             },
             { new :true}
           )
-
           await friend.save();
+         console.log(check)
+          
           res.status(201).json({message : "Friend Saved Successfully"})
         //   console.log("Friend Saved Successfully" , friend)
       }
@@ -114,6 +114,26 @@ app.post('/api/v1/users/addfriend/:userId' , async(req,res)=>{
     console.log("error before saving occured" , error.message)
   }
 
+})
+
+app.get('/api/v1/users/friends/:userId' ,async (req,res)=>{
+    const userId = req.params.userId
+   try {
+    const result = await Friend.find({
+     userId
+    })
+    return res.status(201).json({message :"Friends are found" , result})
+   } catch (error) {
+     res.status(404).json({message :"No friends found"})
+    console.log(error.message)
+   }
+   
+   console.log(typeof result)
+   if(result){
+    return res.status(200).json({message:"friends Found" , result})
+   }else{
+    return res.status(404).json({message :"No users Found" })
+   }
 })
 
 
